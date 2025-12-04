@@ -1,6 +1,6 @@
 # Text Summarization Web App
 
-**Gemini AI Summarizer** – A web application that generates concise summaries from long text using state-of-the-art NLP models.
+**Concise AI** – A web application that generates concise summaries from long text using state-of-the-art NLP models.
 
 ---
 
