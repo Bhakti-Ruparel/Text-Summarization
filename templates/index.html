@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Text Summarizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .container-card {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        .loading-spinner {
+            border-top-color: #4f46e5;
+            -webkit-animation: spinner 1s linear infinite;
+            animation: spinner 1s linear infinite;
+        }
+        @keyframes spinner {
+            to {transform: rotate(360deg);}
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 min-h-screen flex items-start justify-center">
+
+    <div class="w-full max-w-4xl bg-white p-6 sm:p-10 rounded-xl container-card mt-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-3">
+            Concise AI
+        </h1>
+
+        <!-- Input Area -->
+        <div class="mb-6">
+            <label for="inputText" class="block text-lg font-medium text-gray-700 mb-2">
+                Paste Text to Summarize
+            </label>
+            <textarea id="inputText" rows="10" 
+                      class="w-full p-4 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out"
+                      placeholder="Enter a long article, document, or piece of text here...">
+This application is designed to demonstrate how to correctly use the Google Gemini API for performing complex tasks like text summarization directly from a client-side web application. The initial error, "Failed to parse URL from /summarize," stemmed from attempting to use a relative endpoint that does not exist in this sandbox environment. The correct approach is to construct the absolute URL for the Gemini API's generateContent endpoint, ensuring the model name (like gemini-2.5-flash-preview-09-2025) and the API key (which is automatically provided by the platform when left as an empty string) are correctly incorporated into the fetch request. By fixing the URL and ensuring the payload contains the necessary content and system instructions, the application can successfully send the text for summarization and receive a meaningful response, showcasing a fully functional, real-time AI service integration.
+            </textarea>
+        </div>
+
+        <!-- Action Button and Status -->
+        <button id="summarizeButton" onclick="summarizeText()" 
+                class="w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-150 ease-in-out shadow-md disabled:opacity-50 flex items-center justify-center">
+            <span id="buttonText">Generate Summary</span>
+            <div id="loadingIndicator" class="loading-spinner h-5 w-5 border-4 border-t-white rounded-full hidden ml-3"></div>
+        </button>
+        
+        <p id="errorBox" class="text-red-600 text-sm mt-3 hidden"></p>
+
+        <!-- Output Area -->
+        <div class="mt-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">
+                Summary
+            </h2>
+            <div id="outputSummary" class="min-h-[100px] p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 whitespace-pre-wrap leading-relaxed">
+                Your concise summary will appear here after processing.
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Helper function for exponential backoff retry logic
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) {
+                        return response;
+                    }
+                    // Handle non-ok responses (e.g., 4xx, 5xx) that might be temporary
+                    if (i < maxRetries - 1) {
+                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    throw new Error(`API call failed with status: ${response.status} ${response.statusText}`);
+                } catch (error) {
+                    if (i < maxRetries - 1) {
+                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+        }
+
+        window.summarizeText = async function() {
+    const text = document.getElementById('inputText').value.trim();
+    const outputDiv = document.getElementById('outputSummary');
+    const button = document.getElementById('summarizeButton');
+    const buttonText = document.getElementById('buttonText');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const errorBox = document.getElementById('errorBox');
+
+    if (text.length === 0) {
+        errorBox.textContent = "Please enter some text to summarize.";
+        errorBox.classList.remove('hidden');
+        return;
+    }
+
+    // Clear previous state
+    outputDiv.textContent = "Generating summary...";
+    errorBox.classList.add('hidden');
+    button.disabled = true;
+    buttonText.textContent = "Summarizing...";
+    loadingIndicator.classList.remove('hidden');
+
+    try {
+        const apiUrl = "/summarize";
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text })
+        });
+
+        const result = await response.json();
+
+        let summaryText = "Could not generate summary.";
+
+        if (result.summary) {
+            summaryText = result.summary;
+        } else if (result.error) {
+            summaryText = "Error: " + result.error;
+        }
+
+        outputDiv.textContent = summaryText;
+
+    } catch (e) {
+        console.error("Fetch or processing error:", e);
+        errorBox.textContent = `Error: ${e.message}. Please check your network connection or the server.`;
+        errorBox.classList.remove('hidden');
+        outputDiv.textContent = "An error occurred during summarization.";
+    } finally {
+        button.disabled = false;
+        buttonText.textContent = "Generate Summary";
+        loadingIndicator.classList.add('hidden');
+    }
+}
+
+    </script>
+</body>
+</html>
